@@ -8,23 +8,28 @@ from typing import List, Dict, Any
 from pinecone import Pinecone
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve()
+while not (BASE_DIR / ".env").exists() and BASE_DIR != BASE_DIR.parent:
+    BASE_DIR = BASE_DIR.parent
+
+load_dotenv(BASE_DIR / ".env")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
-PINECONE_NAMESPACE = os.getenv("PINECONE_NAMESPACE", "ielts-task2")
+PINECONE_NAMESPACE = os.getenv("PINECONE_NAMESPACE")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-EMBED_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+EMBED_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL")
 
 BATCH_SIZE = 50
 SLEEP_BETWEEN_BATCH = 0.5
 
 JSONL_FILES = [
-    "data/processed/band_descriptors_task2.jsonl",
-    "data/processed/task2_band7p5plus_essay_chunks.jsonl",
-    "data/processed/task2_band7p5plus_feedback_cards.jsonl",
+    BASE_DIR / "data/processed/band_descriptors_task2.jsonl",
+    BASE_DIR / "data/processed/task2_band7p5plus_essay_chunks.jsonl",
+    BASE_DIR / "data/processed/task2_band7p5plus_feedback_cards.jsonl",
 ]
 
 class EmbedAndUpsert:
@@ -57,8 +62,8 @@ class EmbedAndUpsert:
         return [item.embedding for item in response.data]
 
     def build_metadata(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Metadata must match PineconeRetriever filter usage"""
-        return {
+        """Metadata must match PineconeRetriever filter usage. Pinecone rejects null values."""
+        raw = {
             "source_type": record.get("source_type"),
             "criterion": record.get("criterion"),
             "band": record.get("band"),
@@ -66,8 +71,11 @@ class EmbedAndUpsert:
             "prompt": record.get("prompt"),
             "parent_id": record.get("parent_id"),
             "chunk_index": record.get("chunk_index"),
-            "text": record.get("text")[:2000],
+            "card_type": record.get("card_type"),
+            "text": (record.get("text") or "")[:2000],
         }
+        # Pinecone chỉ chấp nhận string, number, boolean, list[str] - không chấp nhận null
+        return {k: v for k, v in raw.items() if v is not None}
 
     async def process_file(self, file_path: str):
         print(f"\nProcessing: {file_path}")

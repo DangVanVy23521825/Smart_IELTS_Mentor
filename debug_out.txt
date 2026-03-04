@@ -1,0 +1,4 @@
+start
+dotenv loaded
+API_KEY len: 0
+INDEX_NAME: smart-ielts-mentor

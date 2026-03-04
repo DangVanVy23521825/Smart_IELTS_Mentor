@@ -9,7 +9,7 @@ SchemaVersion = Literal["v1"]
 
 
 class Citation(BaseModel):
-    source_type: Literal["descriptor", "sample", "error_pattern"]
+    source_type: Literal["descriptor", "sample", "error_pattern", "feedback_card", "essay_chunk"]
     source_id: str | None = None
     title: str | None = None
     snippet: str
@@ -24,6 +24,11 @@ class ErrorItem(BaseModel):
     message: str
     suggestion: str
     fixed_example: str | None = None
+
+
+class StudyPlanItem(BaseModel):
+    focus_area: str = Field(description="e.g. Essay Structure, Cohesion")
+    activities: list[str] = Field(default_factory=list, description="actionable steps")
 
 
 class CriterionScore(BaseModel):
@@ -43,7 +48,7 @@ class WritingAssessmentV1(BaseModel):
     overall_band: float = Field(ge=0, le=9)
     criteria: list[CriterionScore]
     errors: list[ErrorItem] = Field(default_factory=list)
-    study_plan: list[str] = Field(default_factory=list, description="top 3 highest impact actions")
+    study_plan: list[StudyPlanItem] = Field(default_factory=list, description="top 3 focus areas with activities")
     improved_version: str | None = None
     citations: list[Citation] = Field(default_factory=list)
 
@@ -56,7 +61,7 @@ class SpeakingAssessmentV1(BaseModel):
     overall_band: float = Field(ge=0, le=9)
     criteria: list[CriterionScore]
     errors: list[ErrorItem] = Field(default_factory=list)
-    study_plan: list[str] = Field(default_factory=list)
+    study_plan: list[StudyPlanItem] = Field(default_factory=list)
     transcript: str | None = None
     citations: list[Citation] = Field(default_factory=list)
 
