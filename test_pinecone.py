@@ -1,9 +1,11 @@
 from pinecone import Pinecone
 import os
+from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env từ thư mục gốc project
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 index = pc.Index(os.getenv("PINECONE_INDEX_NAME"))

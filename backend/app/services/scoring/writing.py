@@ -23,7 +23,16 @@ from app.schemas.assessment import (
 from app.services.llm.openai_client import OpenAIClient
 from app.services.rag.retriever import retrieve_citations
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+def _discover_project_root() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "rag" / "prompts").exists() and (parent / "data" / "processed").exists():
+            return parent
+    raise RuntimeError("Cannot locate project root containing rag/prompts and data/processed")
+
+
+_PROJECT_ROOT = _discover_project_root()
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 

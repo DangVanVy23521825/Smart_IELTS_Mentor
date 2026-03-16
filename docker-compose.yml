@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: smart-ielts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smart_ielts}
+      POSTGRES_USER: ${POSTGRES_USER:-smart_ielts}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smart_ielts}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"  # host:container; dùng 5433 nếu 5432 bị chiếm
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smart_ielts -d smart_ielts"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: smart-ielts-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # MinIO (S3-compatible) - optional, dùng khi cần Speaking/upload
+  minio:
+    image: minio/minio:latest
+    container_name: smart-ielts-minio
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - s3
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

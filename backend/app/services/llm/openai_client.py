@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any
@@ -19,7 +20,7 @@ class OpenAIClient:
     def __init__(self) -> None:
         if not settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not set")
-        self._client = AsyncOpenAI(api_key=settings.openai_api_key)
+        self._client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.openai_timeout_seconds)
 
     async def chat_json(
         self,
@@ -36,14 +37,17 @@ class OpenAIClient:
         last_err: Exception | None = None
         for _ in range(retries + 1):
             try:
-                resp = await self._client.responses.create(
-                    model=model,
-                    input=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    temperature=temperature,
-                    max_output_tokens=max_output_tokens,
+                resp = await asyncio.wait_for(
+                    self._client.responses.create(
+                        model=model,
+                        input=[
+                            {"role": "system", "content": system},
+                            {"role": "user", "content": user},
+                        ],
+                        temperature=temperature,
+                        max_output_tokens=max_output_tokens,
+                    ),
+                    timeout=settings.openai_timeout_seconds + 5,
                 )
                 text = resp.output_text
                 obj = _extract_json_object(text)

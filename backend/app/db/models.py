@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
@@ -28,6 +28,10 @@ class JobStatus(str, enum.Enum):
     failed = "failed"
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -36,7 +40,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.user)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     submissions: Mapped[list["Submission"]] = relationship(back_populates="user")
 
@@ -51,7 +55,7 @@ class Submission(Base):
     text: Mapped[str | None] = mapped_column(Text, nullable=True)
     audio_s3_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     job: Mapped["Job"] = relationship(back_populates="submission", uselist=False)
     result: Mapped["AssessmentResult"] = relationship(back_populates="submission", uselist=False)
@@ -85,7 +89,7 @@ class AssessmentResult(Base):
     schema_version: Mapped[str] = mapped_column(String(32), default="v1")
     assessment_json: Mapped[dict] = mapped_column(JSON)
     token_usage_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     submission: Mapped["Submission"] = relationship(back_populates="result")
 
@@ -108,6 +112,6 @@ class UserFeedback(Base):
     submission_id: Mapped[str | None] = mapped_column(ForeignKey("submissions.id", ondelete="SET NULL"), index=True)
     rating: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1..5
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    extra_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # was "metadata", tránh conflict với SQLAlchemy
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
