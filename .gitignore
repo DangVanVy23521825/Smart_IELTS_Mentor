@@ -41,4 +41,4 @@ dist/
 # Secrets
 *.pem
 
-.cursor/
+.cursor/.cursor/
