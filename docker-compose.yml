@@ -8,48 +8,106 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-smart_ielts}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smart_ielts}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"  # host:container; dùng 5433 nếu 5432 bị chiếm
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smart_ielts -d smart_ielts"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smart_ielts} -d ${POSTGRES_DB:-smart_ielts}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: smart-ielts-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
 
-  # MinIO (S3-compatible) - optional, dùng khi cần Speaking/upload
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: smart-ielts-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: smart-ielts-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
+    command: celery -A app.workers.celery_app worker -l info -c ${CELERY_CONCURRENCY:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: smart-ielts-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      api:
+        condition: service_started
+
+  # Optional local S3-compatible service for speaking/upload use cases.
   minio:
     image: minio/minio:latest
     container_name: smart-ielts-minio
     restart: unless-stopped
-    command: server /data
+    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 10
     profiles:
       - s3
 

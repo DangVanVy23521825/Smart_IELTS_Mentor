@@ -42,3 +42,4 @@ dist/
 *.pem
 
 .cursor/.cursor/
+.cursor/plans/

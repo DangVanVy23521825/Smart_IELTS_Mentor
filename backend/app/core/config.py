@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     login_rate_limit_window_seconds: int = 300
 
     # Quota / limits
-    free_trial_daily_submissions: int = 5
+    free_trial_daily_submissions: int = 10
     max_writing_words: int = 650
     max_audio_seconds: int = 240
     feature_speaking_enabled: bool = False
