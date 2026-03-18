@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import timezone
+from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -94,14 +95,14 @@ async def submit_writing(
 
 @router.get("/{submission_id}", response_model=SubmissionResultResponse)
 async def get_submission_result(
-    submission_id: str,
+    submission_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SubmissionResultResponse:
     submission = (
         await db.execute(
             select(Submission).where(
-                Submission.id == submission_id,
+                Submission.id == str(submission_id),
                 Submission.user_id == current_user.id,
             )
         )

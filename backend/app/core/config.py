@@ -27,11 +27,12 @@ class Settings(BaseSettings):
     jwt_issuer: str = "smart-ielts-mentor"
     jwt_audience: str = "smart-ielts-mentor-web"
     access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_seconds: int = 300
 
     # Quota / limits
-    free_trial_daily_submissions: int = 3
+    free_trial_daily_submissions: int = 5
     max_writing_words: int = 650
     max_audio_seconds: int = 240
     feature_speaking_enabled: bool = False
@@ -56,6 +57,7 @@ class Settings(BaseSettings):
 
     # Redis
     redis_url: str = "redis://redis:6379/0"
+    redis_key_prefix: str = "sim"
 
     # S3
     s3_bucket: str = "smart-ielts-mentor"
@@ -67,6 +69,8 @@ class Settings(BaseSettings):
     # Observability
     otel_exporter_otlp_endpoint: str | None = None
     otel_service_name: str = "smart-ielts-mentor"
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.0
 
     # Worker reliability
     job_reclaim_running_after_seconds: int = 1800

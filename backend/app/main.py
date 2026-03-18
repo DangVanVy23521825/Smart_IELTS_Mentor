@@ -13,12 +13,9 @@ from sqlalchemy import text
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging
+from app.core.observability import init_sentry
 from app.db.session import engine
-
-try:
-    import redis.asyncio as redis
-except Exception:  # pragma: no cover - defensive fallback
-    redis = None
+from app.services.redis_store import close_redis_client, get_redis_client, has_redis
 
 log = structlog.get_logger()
 
@@ -26,7 +23,9 @@ log = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(settings.app_env)
+    init_sentry(service_name="smart-ielts-api")
     yield
+    await close_redis_client()
 
 
 app = FastAPI(
@@ -91,22 +90,20 @@ async def health():
     except Exception as exc:
         checks["database"] = {"ok": False, "error": str(exc)}
 
-    if redis is None:
+    if not has_redis():
         checks["redis"] = {"ok": False, "error": "redis package unavailable"}
     else:
-        client = redis.from_url(settings.redis_url)
+        client = await get_redis_client()
         try:
-            pong = await client.ping()
+            if client is None:
+                checks["redis"] = {"ok": False, "error": "redis client unavailable"}
+                pong = False
+            else:
+                pong = await client.ping()
             if not pong:
                 checks["redis"] = {"ok": False, "error": "ping failed"}
         except Exception as exc:
             checks["redis"] = {"ok": False, "error": str(exc)}
-        finally:
-            close_fn = getattr(client, "aclose", None)
-            if close_fn is not None:
-                await close_fn()
-            else:  # pragma: no cover - compatibility fallback
-                await client.close()
 
     ok = bool(checks["database"]["ok"]) and bool(checks["redis"]["ok"])
     payload = {"status": "ok" if ok else "degraded", "checks": checks}

@@ -18,6 +18,7 @@ passlib[bcrypt]>=1.7.4
 
 # Logging
 structlog>=24.0.0
+sentry-sdk[fastapi]>=2.0.0
 
 # LLM & RAG
 openai>=1.0.0

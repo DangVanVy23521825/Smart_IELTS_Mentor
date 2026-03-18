@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +16,7 @@ router = APIRouter()
 
 @router.get("/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(
-    job_id: str,
+    job_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> JobStatusResponse:
@@ -22,7 +24,7 @@ async def get_job_status(
         await db.execute(
             select(Job, Submission)
             .join(Submission, Submission.id == Job.submission_id)
-            .where(Job.id == job_id, Submission.user_id == current_user.id)
+            .where(Job.id == str(job_id), Submission.user_id == current_user.id)
         )
     ).one_or_none()
 

@@ -3,6 +3,9 @@ from __future__ import annotations
 from celery import Celery
 
 from app.core.config import settings
+from app.core.observability import init_sentry
+
+init_sentry(service_name="smart-ielts-worker")
 
 celery_app = Celery(
     "smart_ielts_mentor",

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import decode_access_token
 from app.db.models import User
 from app.db.session import get_db
+from app.services.token_store import is_token_revoked
 
 # Bearer authentication scheme
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -32,13 +33,16 @@ async def _get_user_from_token(token: str, db: AsyncSession) -> User:
     """
     try:
         payload = decode_access_token(token)
-    except JWTError:
+    except (JWTError, ValueError):
         raise _unauthorized("Invalid or expired token")
 
     user_id: Optional[str] = payload.get("sub")
+    jti: Optional[str] = payload.get("jti")
 
     if not user_id:
         raise _unauthorized("Invalid token payload")
+    if await is_token_revoked(jti):
+        raise _unauthorized("Token revoked")
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
