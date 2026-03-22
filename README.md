@@ -117,6 +117,7 @@ flowchart TD
 ## 5. End-to-End Writing Flow
 
 ```mermaid
+"
 flowchart TD
   A[POST /api/v1/submissions/writing] --> B[CreateSubmissionAndJobQueued]
   B --> C[EnqueueCeleryTask]
@@ -127,6 +128,7 @@ flowchart TD
   G --> H[GET /api/v1/jobs/{job_id}]
   H --> I[GET /api/v1/submissions/{submission_id}]
   I --> J[POST /api/v1/feedback]
+"
 ```
 
 ## 6. Clone and Setup
