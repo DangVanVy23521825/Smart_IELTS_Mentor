@@ -1,29 +1,29 @@
-# Báo cáo RAG evaluation — Smart IELTS Mentor
+# RAG Evaluation Report — Smart IELTS Mentor
 
-**Nguồn log:** `terminals/3.txt` (dòng 10–103)  
-**Thư mục làm việc:** `Smart_IELTS_Mentor`  
-**Ngày ghi nhận:** 2026-02-24  
+**Log source:** `terminals/3.txt` (lines 10–103)  
+**Working directory:** `Smart_IELTS_Mentor`  
+**Recorded on:** 2026-02-24  
 
 ---
 
-## Lệnh đã chạy
+## Commands executed
 
 ```bash
 ./.venv/bin/python scripts/eval_rag_quality.py --max-samples 10 --judge-model gpt-4o-mini
 ./.venv/bin/python scripts/eval_rag_runtime.py --max-samples 20
 ```
 
-| Script | Mục đích |
-|--------|----------|
-| `eval_rag_quality.py` | Faithfulness (LLM judge), Context relevance (Phase 2) |
+| Script | Purpose |
+|--------|---------|
+| `eval_rag_quality.py` | Faithfulness (LLM judge), context relevance (Phase 2) |
 | `eval_rag_runtime.py` | Latency (retrieval / phase1 / phase2 / total), token usage |
 
 ---
 
 ## 1. Quality summary (`eval_rag_quality.py`)
 
-| Chỉ số | Giá trị |
-|--------|---------|
+| Metric | Value |
+|--------|-------|
 | Essays attempted | 10 |
 | Essays succeeded | 10 |
 | Essays failed | 0 |
@@ -35,7 +35,7 @@
 | Avg judge latency / call | 6.803s |
 | Avg judge tokens / call | 1360.7 |
 
-### Chi tiết theo essay (per-line)
+### Per-essay breakdown
 
 | Essay | faith_avg | relevance_avg |
 |-------|-----------|---------------|
@@ -54,8 +54,8 @@
 
 ## 2. Runtime summary (`eval_rag_runtime.py`)
 
-| Chỉ số | Giá trị |
-|--------|---------|
+| Metric | Value |
+|--------|-------|
 | Requests attempted | 20 |
 | Requests succeeded | 20 |
 | Requests failed | 0 |
@@ -71,7 +71,7 @@
 | **Avg total tokens / request** | **5178.2** |
 | **P95 total tokens / request** | **5330.0** |
 
-### Chi tiết theo request (latency & tokens)
+### Per-request detail (latency & tokens)
 
 | # | latency_total | retr | p1 | p2 | tokens |
 |---|---------------|------|----|----|--------|
@@ -98,30 +98,30 @@
 
 ---
 
-## 3. Ghi chú — Citation mismatch (log)
+## 3. Notes — Citation mismatch (log)
 
-Trong log có nhiều dòng dạng:
+The log contains many lines like:
 
 `Citation mismatch: <criterion> band X.X cited descriptor band Y.Y (index Z)`
 
-Nguyên nhân thường gặp:
+**Common causes:**
 
-- Descriptor trong evidence chỉ có band **bước .0** (6.0, 7.0, 8.0, …), trong khi model chấm **half-band** (6.5, 7.5, 8.5) → so khớp chặt `criterion_band` vs `cited_band` sẽ báo mismatch.
-- Một số case cite nhầm band cao/thấp hơn (ví dụ 7.5 cite 8.0) — cần rà prompt hoặc nới rule validation (ví dụ tolerance ±0.5).
+- Descriptor evidence uses **whole bands only** (6.0, 7.0, 8.0, …) while the model assigns **half-bands** (6.5, 7.5, 8.5) → strict comparison of `criterion_band` vs `cited_band` triggers a mismatch.
+- Some cases cite the wrong adjacent band (e.g. 7.5 citing 8.0) — review the prompt or relax validation (e.g. ±0.5 tolerance).
 
-Đây là **cảnh báo validation**, không làm fail pipeline trong log này.
+These are **validation warnings**; they did not fail the pipeline in this run.
 
 ---
 
-## 4. Tóm tắt nhanh
+## 4. Executive summary
 
-| Khía cạnh | Đánh giá ngắn |
-|-----------|----------------|
-| **Ổn định** | 100% success cho cả quality (10/10) và runtime (20/20). |
-| **Faithfulness** | Trung bình 4/5; 75% pass theo judge — còn room cải thiện. |
-| **Relevance** | ~3.71/5; 60% chunk đạt ≥4 — retrieval dùng được, chưa đồng đều. |
-| **Citation** | 25% criterion thiếu citation sau parse — nên theo dõi khi tune half-band. |
-| **Latency** | ~10s trung bình; Phase 2 LLM thường chậm hơn Phase 1. |
-| **Chi phí token** | ~5.2k tokens/request trung bình; P95 ~5.33k. |
+| Area | Brief assessment |
+|------|------------------|
+| **Reliability** | 100% success for both quality (10/10) and runtime (20/20). |
+| **Faithfulness** | Mean 4/5; 75% pass per judge — room for improvement. |
+| **Relevance** | ~3.71/5; 60% of chunks score ≥4 — retrieval is usable but uneven. |
+| **Citation** | 25% of criteria missing citation after parse — monitor when tuning half-bands. |
+| **Latency** | ~10s average; Phase 2 LLM is typically slower than Phase 1. |
+| **Token cost** | ~5.2k tokens/request on average; P95 ~5.33k. |
 
 ---
